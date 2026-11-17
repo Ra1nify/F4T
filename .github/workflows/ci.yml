@@ -1,0 +1,55 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      flavor:
+        description: Bundle flavor
+        required: true
+        type: choice
+        options: [both, release, debug]
+        default: both
+
+permissions:
+  contents: read
+  packages: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  prepare:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      flavors: ${{ steps.version.outputs.flavors }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: version
+        shell: bash
+        run: |
+          tag_sequence=$(git tag -l 'v*' | sed 's/^v//' | awk -F. '{print $NF}' | sort -n | tail -1)
+          base="$(date -u +%y.%m.%d).$(( ${tag_sequence:-0} + 1 ))"
+          echo "version=${base}-dev.$(git rev-parse --short=7 HEAD)" >> "$GITHUB_OUTPUT"
+          case "${{ inputs.flavor }}" in
+            release) echo 'flavors=["release"]' >> "$GITHUB_OUTPUT" ;;
+            debug)   echo 'flavors=["debug"]' >> "$GITHUB_OUTPUT" ;;
+            *)       echo 'flavors=["release","debug"]' >> "$GITHUB_OUTPUT" ;;
+          esac
+
+  build:
+    needs: prepare
+    strategy:
+      fail-fast: false
+      matrix:
+        flavor: ${{ fromJSON(needs.prepare.outputs.flavors) }}
+    uses: ./.github/workflows/build-mpp.yml
+    with:
+      version: ${{ needs.prepare.outputs.version }}
+      flavor: ${{ matrix.flavor }}
