@@ -20,3 +20,11 @@ then they are listed under "Other Changes" so a release never has an empty body.
 
 Scope goes in parentheses and is rendered in bold, e.g. `feat(Keyboard): Add a patch` becomes
 `- **Keyboard:** Add a patch`.
+
+## 26.11.20.6 (2026-11-20)
+
+Range: `v26.11.20.5`..`HEAD` (1 commit(s))
+
+### Other Changes
+
+- via upload
